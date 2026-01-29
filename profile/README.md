@@ -12,14 +12,6 @@ Like the mythical water dragon, we flow around obstacles, usually with a CLI and
 - **CLI utilities** for problems you didn't know you had
 - **Web apps** for the 12 people who need them
 
-### Philosophy
-
-```
-if it's annoying → automate it
-if it's complex → simplify it
-if it works → ship it
-```
-
 ### Tech we like
 
 `Go` · `Svelte` · `Containers` · `Kubernetes` · `kubectl apply -f hopes-and-dreams.yaml`
