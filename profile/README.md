@@ -2,8 +2,6 @@
 
 **We build small, sharp tools for niche problems.**
 
-Like the mythical water dragon, we flow around obstacles, usually with a CLI and questionable amounts of YAML.
-
 ---
 
 ### What we do
@@ -14,7 +12,7 @@ Like the mythical water dragon, we flow around obstacles, usually with a CLI and
 
 ### Tech we like
 
-`Go` · `Svelte` · `Containers` · `Kubernetes` · `kubectl apply -f hopes-and-dreams.yaml`
+`Go` · `Svelte` · `Docker` · `Kubernetes`
 
 ---
 
