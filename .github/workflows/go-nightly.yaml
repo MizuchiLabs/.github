@@ -13,6 +13,7 @@ permissions:
 jobs:
   nightly:
     name: Nightly image
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -84,8 +85,9 @@ jobs:
               echo "      - -X github.com/mizuchilabs/kata/licx.pubkey=$LICENSE_PUBLIC_KEY"
             fi
           } > .ko.yaml
-          ko build "$MAIN" --bare --tags nightly --platform "$PLATFORMS" --sbom spdx --image-refs "$RUNNER_TEMP/ref"
-          cosign sign --yes "$(cat "$RUNNER_TEMP/ref")"
+          # ko prints only the multi-arch index ref on stdout, that is what gets signed.
+          ref="$(ko build "$MAIN" --bare --tags nightly --platform "$PLATFORMS" --sbom spdx)"
+          cosign sign --yes "$ref"
           echo "Pushed $KO_DOCKER_REPO:nightly" >> "$GITHUB_STEP_SUMMARY"
 
       # The previous nightly is untagged now, this removes it along with its signature and SBOM.
