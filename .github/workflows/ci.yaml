@@ -10,8 +10,16 @@ permissions:
   contents: read
 
 jobs:
-  workflows:
-    uses: ./.github/workflows/actionlint.yaml
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2
 
   zizmor:
     name: Zizmor
