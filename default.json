@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Shared renovate preset for MizuchiLabs repos, use with local>MizuchiLabs/.github",
+  "extends": [
+    "config:recommended",
+    ":semanticCommits",
+    ":disableDependencyDashboard",
+    ":maintainLockFilesWeekly",
+    "security:minimumReleaseAgeNpm",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Europe/Vienna",
+  "postUpdateOptions": [
+    "gomodTidy",
+    "gomodUpdateImportPaths"
+  ],
+  "automerge": true,
+  "platformAutomerge": true,
+  "separateMinorPatch": true,
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "semanticCommitType": "sec"
+  },
+  "osvVulnerabilityAlerts": true,
+  "packageRules": [
+    {
+      "description": "Frontend deps are bundled into the binary, so their updates should release",
+      "matchFileNames": [
+        "web/**"
+      ],
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Shared workflows track main on purpose",
+      "matchDepNames": [
+        "MizuchiLabs/.github"
+      ],
+      "enabled": false
+    }
+  ]
+}

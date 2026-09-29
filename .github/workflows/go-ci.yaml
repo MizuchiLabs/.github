@@ -1,0 +1,77 @@
+name: Go CI
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        description: Commit to check, defaults to the triggering commit
+        type: string
+        default: ""
+      vulncheck:
+        description: Run govulncheck, only turn this off with a linked reason
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - id: setup
+        uses: MizuchiLabs/.github/actions/setup@main
+
+      - name: Frontend
+        if: steps.setup.outputs.web == 'true'
+        working-directory: web
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run --if-present check
+          pnpm run --if-present lint
+          pnpm build
+
+      - name: Modules
+        run: |
+          go mod tidy -diff
+          go mod verify
+
+      - uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
+        with:
+          version: latest
+
+      - name: Test
+        run: go test -race -shuffle=on ./...
+
+      - if: inputs.vulncheck
+        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1
+        with:
+          go-version-file: go.mod
+          repo-checkout: false
+
+      - name: GoReleaser config
+        if: hashFiles('.goreleaser.yaml') != ''
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+        with:
+          version: "~> v2"
+          args: check
+
+  # Inlined instead of calling actionlint.yaml, release would hit the nesting limit.
+  workflows:
+    name: Workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+
+      - uses: raven-actions/actionlint@3d39aea434753780c3b3d4a1a31c854b4dbf49d7 # v2

@@ -1,0 +1,99 @@
+name: Go Nightly
+
+on:
+  workflow_call:
+    secrets:
+      LICENSE_PUBLIC_KEY:
+        description: kata/licx public key, injected into the nightly binary when set
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  nightly:
+    name: Nightly image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    # Shared with the release job so a cleanup never runs while another push is half done.
+    concurrency:
+      group: ghcr-${{ github.repository }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Builds the same image a release would, straight from the kos entry in .goreleaser.yaml.
+      - name: Read ko config
+        id: ko
+        run: |
+          if ! grep -q '^kos:' .goreleaser.yaml 2>/dev/null; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "No kos in .goreleaser.yaml, nothing to build." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "enabled=true"
+            echo "main=$(yq '.kos[0].main // "."' .goreleaser.yaml)"
+            echo "base=$(yq '.kos[0].base_image' .goreleaser.yaml)"
+            echo "repo=$(yq '.kos[0].repositories[0]' .goreleaser.yaml)"
+            echo "platforms=$(yq '.kos[0].platforms | join(",")' .goreleaser.yaml)"
+          } >> "$GITHUB_OUTPUT"
+
+      - id: setup
+        if: steps.ko.outputs.enabled == 'true'
+        uses: MizuchiLabs/.github/actions/setup@main
+
+      - name: Frontend
+        if: steps.ko.outputs.enabled == 'true' && steps.setup.outputs.web == 'true'
+        working-directory: web
+        run: pnpm install --frozen-lockfile && pnpm build
+
+      - if: steps.ko.outputs.enabled == 'true'
+        uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
+
+      - if: steps.ko.outputs.enabled == 'true'
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Build and push
+        if: steps.ko.outputs.enabled == 'true'
+        env:
+          MAIN: ${{ steps.ko.outputs.main }}
+          BASE: ${{ steps.ko.outputs.base }}
+          PLATFORMS: ${{ steps.ko.outputs.platforms }}
+          KO_DOCKER_REPO: ${{ steps.ko.outputs.repo }}
+          LICENSE_PUBLIC_KEY: ${{ secrets.LICENSE_PUBLIC_KEY }}
+        run: |
+          {
+            echo "defaultBaseImage: $BASE"
+            echo "builds:"
+            echo "  - id: app"
+            echo "    main: $MAIN"
+            echo "    env: [CGO_ENABLED=0]"
+            echo "    flags: [-trimpath]"
+            echo "    ldflags:"
+            echo "      - -s -w"
+            echo "      - -X github.com/mizuchilabs/kata/buildinfo.Version=nightly"
+            echo "      - -X github.com/mizuchilabs/kata/buildinfo.Commit=$GITHUB_SHA"
+            if [ -n "$LICENSE_PUBLIC_KEY" ]; then
+              echo "      - -X github.com/mizuchilabs/kata/licx.pubkey=$LICENSE_PUBLIC_KEY"
+            fi
+          } > .ko.yaml
+          ko build "$MAIN" --bare --tags nightly --platform "$PLATFORMS" --sbom spdx --image-refs "$RUNNER_TEMP/ref"
+          cosign sign --yes "$(cat "$RUNNER_TEMP/ref")"
+          echo "Pushed $KO_DOCKER_REPO:nightly" >> "$GITHUB_STEP_SUMMARY"
+
+      # The previous nightly is untagged now, this removes it along with its signature and SBOM.
+      - if: steps.ko.outputs.enabled == 'true'
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1
+        with:
+          delete-untagged: true
+          delete-ghost-images: true
+          delete-partial-images: true
+          delete-orphaned-images: true
+          token: ${{ github.token }}

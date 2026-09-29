@@ -1,0 +1,36 @@
+name: Setup
+description: Set up Go from go.mod, plus Node and pnpm when the repo has a web/ frontend.
+
+outputs:
+  web:
+    description: Whether the repo has a web/ frontend
+    value: ${{ steps.detect.outputs.web }}
+
+runs:
+  using: composite
+  steps:
+    - name: Detect frontend
+      id: detect
+      shell: bash
+      run: |
+        if [ -f web/package.json ]; then
+          echo "web=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "web=false" >> "$GITHUB_OUTPUT"
+        fi
+
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+      with:
+        go-version-file: go.mod
+
+    - if: steps.detect.outputs.web == 'true'
+      uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+      with:
+        package_json_file: web/package.json
+
+    - if: steps.detect.outputs.web == 'true'
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+      with:
+        node-version: lts/*
+        cache: pnpm
+        cache-dependency-path: web/pnpm-lock.yaml
