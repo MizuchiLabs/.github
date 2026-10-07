@@ -164,6 +164,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           COSIGN_YES: "true"
           LICENSE_PUBLIC_KEY: ${{ secrets.LICENSE_PUBLIC_KEY }}
+          # A repo can hold other tags on the same commit, like the license/v* of a nested module.
+          GORELEASER_CURRENT_TAG: ${{ env.VERSION }}
 
       - name: GitHub release
         if: steps.tools.outputs.goreleaser != 'true'
