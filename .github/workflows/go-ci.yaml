@@ -18,7 +18,8 @@ permissions:
 jobs:
   go:
     name: Go
-    runs-on: ubuntu-latest
+    # RUNNER is a repo or org variable, fork PRs always stay on hosted runners.
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7

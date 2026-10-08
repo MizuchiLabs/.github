@@ -27,6 +27,7 @@ Conventions the workflows rely on:
 - a frontend lives in `web/` with `packageManager` set, `check` and `lint` scripts are run when they exist
 - `kos:` in the goreleaser config turns on nightly images, the ghcr login and image cleanup, the nightly reads `main`, `base_image`, `repositories` and `platforms` from the first entry
 - a kata/licx public key is passed as the `LICENSE_PUBLIC_KEY` secret and read as `.Env.LICENSE_PUBLIC_KEY`
+- a `RUNNER` variable on a repo or the org moves the Go CI job to that runner label, `self-hosted` for the home runners. Fork PRs, nightly and release always run on hosted runners
 
 ## Releases
 

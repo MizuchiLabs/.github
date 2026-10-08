@@ -22,6 +22,8 @@ runs:
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
         go-version-file: go.mod
+        # Self-hosted runners keep their own cache, uploading it would mix repos.
+        cache: ${{ runner.environment == 'github-hosted' }}
 
     - if: steps.detect.outputs.web == 'true'
       uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
@@ -32,5 +34,5 @@ runs:
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
       with:
         node-version: lts/*
-        cache: pnpm
+        cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
         cache-dependency-path: web/pnpm-lock.yaml
