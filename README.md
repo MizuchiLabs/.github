@@ -21,17 +21,19 @@ jobs:
 
 Callers pin `@main` on purpose so a fix lands everywhere at once. Everything inside this repo is SHA pinned and renovate keeps it fresh.
 
+Self-hosted runners keep their own caches. Hosted runners only save the Go and pnpm caches from `main`, other branches restore from it. Release and nightly builds run without a cache.
+
 Conventions the workflows rely on:
 
 - `go.mod` at the root, `.goreleaser.yaml` (not `.yml`) if the repo ships binaries
 - a frontend lives in `web/` with `packageManager` set, `check` and `lint` scripts are run when they exist
 - `kos:` in the goreleaser config turns on nightly images, the ghcr login and image cleanup, the nightly reads `main`, `base_image`, `repositories` and `platforms` from the first entry
 - a kata/licx public key is passed as the `LICENSE_PUBLIC_KEY` secret and read as `.Env.LICENSE_PUBLIC_KEY`
-- a `RUNNER` variable on a repo or the org moves the Go CI job to that runner label, `self-hosted` for the home runners. Fork PRs, nightly and release always run on hosted runners
+- a `RUNNER` variable on a repo or the org moves the Go CI job to that runner label, `self-hosted` for the home runners. Fork PRs, the nightly image and the release job always run on hosted runners. The CI run inside a release follows `RUNNER` too
 
 ## Releases
 
-Releases run every Wednesday at 03:40 UTC (early morning in Vienna), and only when git-cliff finds `feat`, `fix` or `sec` commits since the last tag. A `sec` commit on main releases right away. Stable image tags are never deleted, only untagged leftovers and the previous nightly.
+Releases run every Wednesday at 03:40 UTC (early morning in Vienna), and only when commits since the last tag change what ships. Commits that only touch docs, CI, tests or dev config don't count, and neither do `chore(deps)` updates. The list lives in `GIT_CLIFF_EXCLUDE_PATH` in `go-release.yaml`. A `sec` commit on main releases right away. The first release is always cut by hand, with a `v*` tag or a manual run. Stable image tags are never deleted, only untagged leftovers and the previous nightly.
 
 ## Renovate
 

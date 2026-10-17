@@ -40,19 +40,33 @@ jobs:
         id: plan
         env:
           GH_TOKEN: ${{ github.token }}
+          # Commits that only touch these don't change what ships, so they never bump the version.
+          GIT_CLIFF_EXCLUDE_PATH: >-
+            **/*.md docs/** .github/** **/*_test.go **/testdata/** LICENSE* .gitignore .editorconfig
+            .golangci.yml cliff.toml taskfile.yaml compose.y*ml .env.example
         run: |
           if grep -q '^kos:' .goreleaser.yaml 2>/dev/null; then
             echo "images=true" >> "$GITHUB_OUTPUT"
           fi
 
-          # Pushes to main only release early for security fixes, everything else waits for the schedule.
-          if [ "$GITHUB_EVENT_NAME" = push ] && [ "$GITHUB_REF_TYPE" = branch ]; then
-            last="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
-            subjects="$(git log --format=%s "${last:+$last..}HEAD")"
-            if ! grep -qE '^sec(\(.*\))?!?:' <<<"$subjects"; then
+          # Schedules and pushes to main release on their own, tags and manual runs on demand.
+          if [ "$GITHUB_EVENT_NAME" != workflow_dispatch ] && [ "$GITHUB_REF_TYPE" = branch ]; then
+            releases="$(gh release list --limit 1 --json tagName --jq length)"
+            if [ "$releases" = 0 ]; then
               echo "release=false" >> "$GITHUB_OUTPUT"
-              echo "No security fix since ${last:-the start}, waiting for the scheduled release." >> "$GITHUB_STEP_SUMMARY"
+              echo "No release yet, the first one is cut by hand with a tag or a manual run." >> "$GITHUB_STEP_SUMMARY"
               exit 0
+            fi
+
+            # Pushes to main only release early for security fixes, everything else waits for the schedule.
+            if [ "$GITHUB_EVENT_NAME" = push ]; then
+              last="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+              subjects="$(git log --format=%s "${last:+$last..}HEAD")"
+              if ! grep -qE '^sec(\(.*\))?!?:' <<<"$subjects"; then
+                echo "release=false" >> "$GITHUB_OUTPUT"
+                echo "No security fix since ${last:-the start}, waiting for the scheduled release." >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+              fi
             fi
           fi
 
@@ -116,7 +130,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: true # the Tag step pushes
 
+      # No cache, anything running on main could write a poisoned one that ends up in the release.
       - uses: MizuchiLabs/.github/actions/setup@main
+        with:
+          cache: false
 
       - name: Detect tools
         id: tools
@@ -172,10 +189,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$VERSION" --verify-tag --title "$VERSION" --notes-file "$RUNNER_TEMP/notes.md"
-
-      - name: Warm the Go proxy
-        continue-on-error: true
-        run: GOPROXY=https://proxy.golang.org go list -m "$(go list -m)@$VERSION"
 
       # Version tags are kept forever, users pin them. Only leftovers go.
       - if: needs.plan.outputs.images == 'true'

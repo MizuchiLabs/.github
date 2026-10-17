@@ -46,9 +46,12 @@ jobs:
             echo "platforms=$(yq '.kos[0].platforms | join(",")' .goreleaser.yaml)"
           } >> "$GITHUB_OUTPUT"
 
+      # No cache, anything running on main could write a poisoned one that ends up in the image.
       - id: setup
         if: steps.ko.outputs.enabled == 'true'
         uses: MizuchiLabs/.github/actions/setup@main
+        with:
+          cache: false
 
       - name: Frontend
         if: steps.ko.outputs.enabled == 'true' && steps.setup.outputs.web == 'true'

@@ -1,6 +1,11 @@
 name: Setup
 description: Set up Go from go.mod, plus Node and pnpm when the repo has a web/ frontend.
 
+inputs:
+  cache:
+    description: Use the Actions cache on hosted runners, turn it off for builds that ship
+    default: "true"
+
 outputs:
   web:
     description: Whether the repo has a web/ frontend
@@ -9,9 +14,12 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Detect frontend
+    - name: Detect
       id: detect
       shell: bash
+      env:
+        CACHE: ${{ inputs.cache }}
+        HOSTED: ${{ runner.environment == 'github-hosted' }}
       run: |
         if [ -f web/package.json ]; then
           echo "web=true" >> "$GITHUB_OUTPUT"
@@ -19,27 +27,87 @@ runs:
           echo "web=false" >> "$GITHUB_OUTPUT"
         fi
 
-    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        # Self-hosted runners keep their own cache, uploading it would mix repos.
+        # Only main saves, other branches restore from it instead of piling up their own copies.
+        if [ "$CACHE" != true ] || [ "$HOSTED" != true ]; then
+          echo "cache=off" >> "$GITHUB_OUTPUT"
+        elif [ "$GITHUB_REF" = refs/heads/main ]; then
+          echo "cache=save" >> "$GITHUB_OUTPUT"
+        else
+          echo "cache=restore" >> "$GITHUB_OUTPUT"
+        fi
+
+    - id: go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
         go-version-file: go.mod
-        # Self-hosted runners keep their own cache, uploading it would mix repos.
-        cache: ${{ runner.environment == 'github-hosted' }}
+        cache: false
+
+    - id: go-cache
+      if: steps.detect.outputs.cache != 'off'
+      shell: bash
+      env:
+        PREFIX: go-${{ runner.os }}-${{ runner.arch }}-${{ steps.go.outputs.go-version }}-
+        HASH: ${{ hashFiles('go.sum') }}
+      run: |
+        {
+          echo "prefix=$PREFIX"
+          echo "key=$PREFIX$HASH"
+          echo "paths<<EOF"
+          go env GOMODCACHE GOCACHE
+          echo "EOF"
+        } >> "$GITHUB_OUTPUT"
+
+    - if: steps.detect.outputs.cache == 'save'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.go-cache.outputs.paths }}
+        key: ${{ steps.go-cache.outputs.key }}
+        restore-keys: ${{ steps.go-cache.outputs.prefix }}
+
+    - if: steps.detect.outputs.cache == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.go-cache.outputs.paths }}
+        key: ${{ steps.go-cache.outputs.key }}
+        restore-keys: ${{ steps.go-cache.outputs.prefix }}
 
     # The pnpm installer runs on the Node in PATH, the distro one on self-hosted runners is too old.
-    - if: steps.detect.outputs.web == 'true' && runner.environment != 'github-hosted'
+    - if: steps.detect.outputs.web == 'true'
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
       with:
         node-version: lts/*
+        package-manager-cache: false
 
     - if: steps.detect.outputs.web == 'true'
       uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
       with:
         package_json_file: web/package.json
 
-    # Hosted runners set up Node after pnpm, the pnpm cache needs pnpm installed.
-    - if: steps.detect.outputs.web == 'true' && runner.environment == 'github-hosted'
-      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+    - id: pnpm-cache
+      if: steps.detect.outputs.web == 'true' && steps.detect.outputs.cache != 'off'
+      shell: bash
+      working-directory: web
+      env:
+        PREFIX: pnpm-${{ runner.os }}-${{ runner.arch }}-
+        HASH: ${{ hashFiles('web/pnpm-lock.yaml') }}
+      run: |
+        {
+          echo "prefix=$PREFIX"
+          echo "key=$PREFIX$HASH"
+          echo "path=$(pnpm store path --silent)"
+        } >> "$GITHUB_OUTPUT"
+
+    - if: steps.detect.outputs.web == 'true' && steps.detect.outputs.cache == 'save'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        node-version: lts/*
-        cache: pnpm
-        cache-dependency-path: web/pnpm-lock.yaml
+        path: ${{ steps.pnpm-cache.outputs.path }}
+        key: ${{ steps.pnpm-cache.outputs.key }}
+        restore-keys: ${{ steps.pnpm-cache.outputs.prefix }}
+
+    - if: steps.detect.outputs.web == 'true' && steps.detect.outputs.cache == 'restore'
+      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.pnpm-cache.outputs.path }}
+        key: ${{ steps.pnpm-cache.outputs.key }}
+        restore-keys: ${{ steps.pnpm-cache.outputs.prefix }}
