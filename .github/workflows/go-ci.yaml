@@ -51,12 +51,10 @@ jobs:
       - name: Test
         run: go test -race -shuffle=on ./...
 
-      - if: inputs.vulncheck
-        uses: golang/govulncheck-action@032d45514ae346b1db93c04b0c90b841c370344f # v1
-        with:
-          go-version-input: ""
-          go-version-file: go.mod
-          repo-checkout: false
+      # Not govulncheck-action, its own setup-go uploads the self-hosted runner's whole Go cache.
+      - name: Vulncheck
+        if: inputs.vulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
       - name: GoReleaser config
         if: hashFiles('.goreleaser.yaml') != ''
