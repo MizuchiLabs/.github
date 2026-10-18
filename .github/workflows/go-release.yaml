@@ -18,7 +18,7 @@ permissions:
 jobs:
   plan:
     name: Plan
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     outputs:
       release: ${{ steps.plan.outputs.release }}
@@ -110,7 +110,7 @@ jobs:
   release:
     name: Release
     needs: [plan, ci]
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || vars.RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 45
     permissions:
       contents: write
