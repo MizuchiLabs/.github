@@ -41,7 +41,7 @@ jobs:
           {
             echo "enabled=true"
             echo "main=$(yq '.kos[0].main // "."' .goreleaser.yaml)"
-            echo "base=$(yq '.kos[0].base_image' .goreleaser.yaml)"
+            echo "base=$(yq '.kos[0].base_image // ""' .goreleaser.yaml)"
             echo "repo=$(yq '.kos[0].repositories[0]' .goreleaser.yaml)"
             echo "platforms=$(yq '.kos[0].platforms | join(",")' .goreleaser.yaml)"
           } >> "$GITHUB_OUTPUT"
@@ -52,6 +52,16 @@ jobs:
         uses: MizuchiLabs/.github/actions/setup@main
         with:
           cache: false
+
+      # Self-hosted runners share their Go caches with every branch's CI, so builds that ship start empty.
+      - name: Fresh Go caches
+        if: steps.ko.outputs.enabled == 'true'
+        run: |
+          {
+            echo "GOCACHE=$RUNNER_TEMP/go-build"
+            echo "GOMODCACHE=$RUNNER_TEMP/go-mod"
+            echo "GOFLAGS=-modcacherw" # read-only module files would block the runner's temp cleanup
+          } >> "$GITHUB_ENV"
 
       - name: Frontend
         if: steps.ko.outputs.enabled == 'true' && steps.setup.outputs.web == 'true'
@@ -74,7 +84,9 @@ jobs:
           LICENSE_PUBLIC_KEY: ${{ secrets.LICENSE_PUBLIC_KEY }}
         run: |
           {
-            echo "defaultBaseImage: $BASE"
+            if [ -n "$BASE" ]; then
+              echo "defaultBaseImage: $BASE"
+            fi
             echo "builds:"
             echo "  - id: app"
             echo "    main: $MAIN"

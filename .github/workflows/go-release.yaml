@@ -135,6 +135,15 @@ jobs:
         with:
           cache: false
 
+      # Self-hosted runners share their Go caches with every branch's CI, so builds that ship start empty.
+      - name: Fresh Go caches
+        run: |
+          {
+            echo "GOCACHE=$RUNNER_TEMP/go-build"
+            echo "GOMODCACHE=$RUNNER_TEMP/go-mod"
+            echo "GOFLAGS=-modcacherw" # read-only module files would block the runner's temp cleanup
+          } >> "$GITHUB_ENV"
+
       - name: Detect tools
         id: tools
         run: |

@@ -21,7 +21,7 @@ jobs:
 
 Callers pin `@main` on purpose so a fix lands everywhere at once. Everything inside this repo is SHA pinned and renovate keeps it fresh.
 
-Self-hosted runners keep their own caches. Hosted runners only save the Go and pnpm caches from `main`, other branches restore from it. Release and nightly builds run without a cache.
+Self-hosted runners keep their own caches. Hosted runners only save the Go and pnpm caches from `main`, other branches restore from it. Release and nightly builds skip the Actions cache and start from empty Go caches on any runner.
 
 Conventions the workflows rely on:
 
@@ -29,7 +29,7 @@ Conventions the workflows rely on:
 - a frontend lives in `web/` with `packageManager` set, `check` and `lint` scripts are run when they exist
 - `kos:` in the goreleaser config turns on nightly images, the ghcr login and image cleanup, the nightly reads `main`, `base_image`, `repositories` and `platforms` from the first entry
 - a kata/licx public key is passed as the `LICENSE_PUBLIC_KEY` secret and read as `.Env.LICENSE_PUBLIC_KEY`
-- a `RUNNER` variable on a repo or the org moves the Go CI job to that runner label, `self-hosted` for the home runners. Fork PRs, the nightly image and the release job always run on hosted runners. The CI run inside a release follows `RUNNER` too
+- a `RUNNER` variable on a repo or the org moves every job to that runner label, `self-hosted` for the home runners. Fork PRs always stay on hosted runners
 
 ## Releases
 
