@@ -26,8 +26,10 @@ for repo in "$root"/*/; do
     cp "$src" "$dst"
   }
 
-  # Only repos that already opted into renovate.
-  [ -f "$repo/.github/renovate.json" ] && sync renovate.json .github/renovate.json
+  # Only repos that already opted into renovate. Libraries carry their own packageRules, those stay.
+  if [ -f "$repo/.github/renovate.json" ] && ! grep -q '"packageRules"' "$repo/.github/renovate.json"; then
+    sync renovate.json .github/renovate.json
+  fi
 
   if [ -f "$repo/go.mod" ]; then
     sync go/.golangci.yml .golangci.yml

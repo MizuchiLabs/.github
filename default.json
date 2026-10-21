@@ -36,6 +36,45 @@
         "MizuchiLabs/.github"
       ],
       "enabled": false
+    },
+    {
+      "description": "Apps build with the newest Go, the go line in the root go.mod is their toolchain. Libraries turn this off in their own renovate.json",
+      "matchDepTypes": [
+        "golang"
+      ],
+      "matchFileNames": [
+        "go.mod"
+      ],
+      "rangeStrategy": "bump",
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "The toolchain line picks the Go a binary is built with, so a bump has to release",
+      "matchDepTypes": [
+        "toolchain"
+      ],
+      "semanticCommitType": "fix"
+    },
+    {
+      "description": "Go patch releases are security releases, ship them right away",
+      "matchDatasources": [
+        "golang-version"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
+      "semanticCommitType": "sec"
+    },
+    {
+      "description": "golangci-lint needs a day or two to support a new Go minor",
+      "matchDatasources": [
+        "golang-version"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "major"
+      ],
+      "minimumReleaseAge": "3 days"
     }
   ]
 }

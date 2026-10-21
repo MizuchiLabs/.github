@@ -26,6 +26,7 @@ Self-hosted runners keep their own caches. Hosted runners only save the Go and p
 Conventions the workflows rely on:
 
 - `go.mod` at the root, `.goreleaser.yaml` (not `.yml`) if the repo ships binaries
+- setup-go reads the `toolchain` line of `go.mod` first, then the `go` line. Keep the `toolchain` line newer than `go`, `go mod tidy` drops it otherwise
 - a frontend lives in `web/` with `packageManager` set, `check` and `lint` scripts are run when they exist
 - `kos:` in the goreleaser config turns on nightly images, the ghcr login and image cleanup, the nightly reads `main`, `base_image`, `repositories` and `platforms` from the first entry
 - a kata/licx public key is passed as the `LICENSE_PUBLIC_KEY` secret and read as `.Env.LICENSE_PUBLIC_KEY`
@@ -37,8 +38,13 @@ Releases run every Wednesday at 03:40 UTC (early morning in Vienna), and only wh
 
 ## Renovate
 
-Each repo's `.github/renovate.json` only extends `local>MizuchiLabs/.github`, the rules live in `default.json`. Everything automerges, CI is the gate. Updates under `web/` are committed as `fix(deps)` because they ship in the binary, vulnerability fixes as `sec(deps)` so they release immediately.
+Each repo's `.github/renovate.json` extends `local>MizuchiLabs/.github`, the rules live in `default.json`. Libraries add a few `packageRules` of their own below it. Everything automerges, CI is the gate. Updates under `web/` are committed as `fix(deps)` because they ship in the binary, vulnerability fixes as `sec(deps)` so they release immediately.
+
+Go is handled like this:
+
+- Every repo counts as an app by default. Apps pin an exact `go` line in the root `go.mod` and Renovate bumps it on every Go release. Patches come as `sec(deps)` and release right away. Minors come as `fix(deps)` three days after release, so golangci-lint can catch up.
+- Libraries keep the `go` line as the minimum for importers and raise it by hand. A `toolchain` line picks the Go that CI and releases build with, and Renovate keeps it current. Their `renovate.json` turns off `golang` updates, and libraries without a binary also commit `toolchain` bumps as `chore` so they don't release. See kata for a pure library and sqlite-schema-diff for one that ships a CLI. If a Go vulnerability alert beats the plain update, Renovate forces it to `sec(deps)` and the library releases anyway.
 
 ## Templates
 
-`templates/` holds files that can't be referenced remotely. Run `./sync.sh` to copy them into the sibling checkouts, `./sync.sh --check` to only report drift.
+`templates/` holds files that can't be referenced remotely. Run `./sync.sh` to copy them into the sibling checkouts, `./sync.sh --check` to only report drift. A `renovate.json` with its own `packageRules` is left alone.
