@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: taiki-e/install-action@645d1ab48b3cb8591684a8b730b2ccf4cb3f9568 # v2.87.33
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: git-cliff
 
@@ -173,7 +173,7 @@ jobs:
           git tag -a "$VERSION" -m "$VERSION" "$SHA"
           git push origin "$VERSION"
 
-      - uses: taiki-e/install-action@645d1ab48b3cb8591684a8b730b2ccf4cb3f9568 # v2.87.33
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
         with:
           tool: git-cliff
 
