@@ -7,7 +7,7 @@ Reusable workflows, a renovate preset and config templates for all MizuchiLabs r
 | Workflow          | What it does                                                                                                                                                                                                      |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `go-ci.yaml`      | Builds and checks `web/` if present, `go mod tidy -diff`, golangci-lint, `go test -race -shuffle=on`, govulncheck, `goreleaser check`, actionlint                                                                 |
-| `go-release.yaml` | Computes the next version with git-cliff, runs `go-ci` on that commit, tags, then releases with goreleaser or a plain GitHub release for libraries. Retries a tag that has no release yet. Removes untagged images |
+| `go-release.yaml` | Computes the next version with git-cliff, runs `go-ci` on that commit, tags, then releases with goreleaser or a plain GitHub release for libraries. Retries the latest tag if it has no release yet. Removes untagged images |
 | `go-nightly.yaml` | On every push to main, builds the `kos` image with ko, pushes `:nightly`, signs it and removes the previous one |
 | `actionlint.yaml` | Lints workflows, for repos that are not Go                                                                                                                                                                        |
 

@@ -78,6 +78,13 @@ jobs:
 
           # An existing tag without a release means a previous run failed after tagging, so retry it.
           if git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            # With nothing to bump git-cliff can print an older tag, only the latest one is a retry.
+            latest="$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)"
+            if [ "$GITHUB_REF_TYPE" != tag ] && [ "$version" != "$latest" ]; then
+              echo "release=false" >> "$GITHUB_OUTPUT"
+              echo "Nothing to release, $latest is the latest tag." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
             if gh release view "$version" >/dev/null 2>&1; then
               echo "release=false" >> "$GITHUB_OUTPUT"
               echo "Nothing to release, $version is the latest release." >> "$GITHUB_STEP_SUMMARY"
