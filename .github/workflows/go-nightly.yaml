@@ -101,7 +101,12 @@ jobs:
         if: steps.ko.outputs.enabled == 'true'
         env:
           BUILD_ENV: ${{ secrets.BUILD_ENV }}
-        run: printf '%s\n' "$BUILD_ENV" | sed '/^[[:space:]]*$/d' >> "$GITHUB_ENV"
+        # The runner masks the whole secret, not each value, and later steps print their env.
+        run: |
+          printf '%s\n' "$BUILD_ENV" | sed '/^[[:space:]]*$/d' | while IFS= read -r line; do
+            if [ -n "${line#*=}" ]; then echo "::add-mask::${line#*=}"; fi
+            echo "$line" >> "$GITHUB_ENV"
+          done
 
       - name: Build and push
         if: steps.ko.outputs.enabled == 'true'
