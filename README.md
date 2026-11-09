@@ -28,8 +28,8 @@ Conventions the workflows rely on:
 - `go.mod` at the root, `.goreleaser.yaml` (not `.yml`) if the repo ships binaries
 - setup-go reads the `toolchain` line of `go.mod` first, then the `go` line. Keep the `toolchain` line newer than `go`, `go mod tidy` drops it otherwise
 - a frontend lives in `web/` with `packageManager` set, `check` and `lint` scripts are run when they exist
-- `kos:` in the goreleaser config turns on nightly images, the ghcr login and image cleanup, the nightly reads `main`, `base_image`, `repositories` and `platforms` from the first entry
-- a kata/licx public key is passed as the `LICENSE_PUBLIC_KEY` secret and read as `.Env.LICENSE_PUBLIC_KEY`
+- `kos:` in the goreleaser config turns on nightly images, the ghcr login and image cleanup. The nightly builds the first entry with ko the way goreleaser would, with the ldflags, flags and env of the build it uses. `{{ .Version }}` becomes `nightly`, the commit fields come from git
+- the optional `BUILD_ENV` secret holds `NAME=value` lines the nightly and release builds see as env, read in the goreleaser config as `.Env.NAME`. The caller fills it, like `BUILD_ENV: LICENSE_PUBLIC_KEY=${{ secrets.SUIMON_LICENSE_PUBLIC_KEY }}`. Only for values that may end up in the binary, like a license public key
 - a `RUNNER` variable on a repo or the org moves every job to that runner label, `self-hosted` for the home runners. Fork PRs always stay on hosted runners
 
 ## Releases

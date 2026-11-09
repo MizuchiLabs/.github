@@ -3,8 +3,8 @@ name: Go Nightly
 on:
   workflow_call:
     secrets:
-      LICENSE_PUBLIC_KEY:
-        description: kata/licx public key, injected into the nightly binary when set
+      BUILD_ENV:
+        description: NAME=value lines the build sees as env, read in .goreleaser.yaml as .Env.NAME. Only for values that may end up in the binary, like a license public key
         required: false
 
 permissions:
@@ -29,8 +29,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # Builds the same image a release would, straight from the kos entry in .goreleaser.yaml.
-      - name: Read ko config
+      # Builds the same image a release would, from the first kos entry in .goreleaser.yaml and the build it uses.
+      - name: Ko config
         id: ko
         run: |
           if ! grep -q '^kos:' .goreleaser.yaml 2>/dev/null; then
@@ -38,12 +38,35 @@ jobs:
             echo "No kos in .goreleaser.yaml, nothing to build." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          # Same fallbacks as goreleaser, the kos entry first, then the build it names.
+          # shellcheck disable=SC2016
+          yq '
+            .project_name as $name
+            | .kos[0] as $ko
+            | ((.builds // []) | map(select((.id // $name) == ($ko.build // $ko.id // $name))) | .[0] // {}) as $b
+            | {
+                "defaultBaseImage": ($ko.base_image // "cgr.dev/chainguard/static"),
+                "builds": [{
+                  "id": "app",
+                  "main": ($ko.main // $b.main // "."),
+                  "env": ($ko.env // $b.env // []),
+                  "flags": ($ko.flags // $b.flags // []),
+                  "ldflags": ($ko.ldflags // $b.ldflags // [])
+                }]
+              }
+          ' .goreleaser.yaml > .ko.yaml
+          # goreleaser and ko name their template fields differently.
+          sed -i -E \
+            -e 's/\{\{ *\.Version *\}\}/nightly/g' \
+            -e 's/\{\{ *\.(Full)?Commit *\}\}/{{ .Git.FullCommit }}/g' \
+            -e 's/\{\{ *\.(ShortCommit|CommitDate|CommitTimestamp) *\}\}/{{ .Git.\1 }}/g' \
+            .ko.yaml
           {
             echo "enabled=true"
-            echo "main=$(yq '.kos[0].main // "."' .goreleaser.yaml)"
-            echo "base=$(yq '.kos[0].base_image // ""' .goreleaser.yaml)"
+            echo "main=$(yq '.builds[0].main' .ko.yaml)"
             echo "repo=$(yq '.kos[0].repositories[0]' .goreleaser.yaml)"
-            echo "platforms=$(yq '.kos[0].platforms | join(",")' .goreleaser.yaml)"
+            echo "platforms=$(yq '.kos[0].platforms // ["linux/amd64"] | join(",")' .goreleaser.yaml)"
+            echo "sbom=$(yq '.kos[0].sbom // "spdx"' .goreleaser.yaml)"
           } >> "$GITHUB_OUTPUT"
 
       # No cache, anything running on main could write a poisoned one that ends up in the image.
@@ -74,34 +97,22 @@ jobs:
       - if: steps.ko.outputs.enabled == 'true'
         uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
+      - name: Build env
+        if: steps.ko.outputs.enabled == 'true'
+        env:
+          BUILD_ENV: ${{ secrets.BUILD_ENV }}
+        run: printf '%s\n' "$BUILD_ENV" | sed '/^[[:space:]]*$/d' >> "$GITHUB_ENV"
+
       - name: Build and push
         if: steps.ko.outputs.enabled == 'true'
         env:
           MAIN: ${{ steps.ko.outputs.main }}
-          BASE: ${{ steps.ko.outputs.base }}
           PLATFORMS: ${{ steps.ko.outputs.platforms }}
+          SBOM: ${{ steps.ko.outputs.sbom }}
           KO_DOCKER_REPO: ${{ steps.ko.outputs.repo }}
-          LICENSE_PUBLIC_KEY: ${{ secrets.LICENSE_PUBLIC_KEY }}
         run: |
-          {
-            if [ -n "$BASE" ]; then
-              echo "defaultBaseImage: $BASE"
-            fi
-            echo "builds:"
-            echo "  - id: app"
-            echo "    main: $MAIN"
-            echo "    env: [CGO_ENABLED=0]"
-            echo "    flags: [-trimpath]"
-            echo "    ldflags:"
-            echo "      - -s -w"
-            echo "      - -X github.com/mizuchilabs/kata/buildinfo.Version=nightly"
-            echo "      - -X github.com/mizuchilabs/kata/buildinfo.Commit=$GITHUB_SHA"
-            if [ -n "$LICENSE_PUBLIC_KEY" ]; then
-              echo "      - -X github.com/mizuchilabs/kata/licx.pubkey=$LICENSE_PUBLIC_KEY"
-            fi
-          } > .ko.yaml
           # ko prints only the multi-arch index ref on stdout, that is what gets signed.
-          ref="$(ko build "$MAIN" --bare --tags nightly --platform "$PLATFORMS" --sbom spdx)"
+          ref="$(ko build "$MAIN" --bare --tags nightly --platform "$PLATFORMS" --sbom "$SBOM")"
           cosign sign --yes "$ref"
           echo "Pushed $KO_DOCKER_REPO:nightly" >> "$GITHUB_STEP_SUMMARY"
 
