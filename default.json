@@ -7,7 +7,7 @@
     ":disableDependencyDashboard",
     ":maintainLockFilesWeekly",
     "security:minimumReleaseAgeNpm",
-    "helpers:pinGitHubActionDigests"
+    "helpers:pinGitHubActionDigestsToSemver"
   ],
   "timezone": "Europe/Vienna",
   "postUpdateOptions": [
