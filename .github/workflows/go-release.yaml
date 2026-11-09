@@ -27,7 +27,7 @@ jobs:
       tagged: ${{ steps.plan.outputs.tagged }}
       images: ${{ steps.plan.outputs.images }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -131,7 +131,7 @@ jobs:
       VERSION: ${{ needs.plan.outputs.version }}
       SHA: ${{ needs.plan.outputs.sha }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.plan.outputs.sha }}
           fetch-depth: 0
