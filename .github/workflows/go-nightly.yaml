@@ -86,10 +86,20 @@ jobs:
             echo "GOFLAGS=-modcacherw" # read-only module files would block the runner's temp cleanup
           } >> "$GITHUB_ENV"
 
-      - name: Frontend
-        if: steps.ko.outputs.enabled == 'true' && steps.setup.outputs.web == 'true'
-        working-directory: web
-        run: pnpm install --frozen-lockfile && pnpm build
+      # What goreleaser runs before a release, like building the frontend. Without it
+      # the image embeds the placeholders where a release embeds the real files.
+      - name: Before hooks
+        if: steps.ko.outputs.enabled == 'true'
+        run: |
+          if [ "$(yq '[.before.hooks // [] | .[] | select(tag != "!!str")] | length' .goreleaser.yaml)" != 0 ]; then
+            echo "::error::A before hook in .goreleaser.yaml is not a plain command, the nightly cannot run it."
+            exit 1
+          fi
+          yq '.before.hooks // [] | .[]' .goreleaser.yaml | while IFS= read -r hook; do
+            echo "::group::$hook"
+            sh -c "$hook"
+            echo "::endgroup::"
+          done
 
       - if: steps.ko.outputs.enabled == 'true'
         uses: ko-build/setup-ko@61b4d1d396f5b2e7d6bb6fefdce3dc38d1a13445 # v0.10
