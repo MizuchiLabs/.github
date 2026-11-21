@@ -4,7 +4,7 @@
 
 Please don't open a public issue for a security problem.
 
-- Use "Report a vulnerability" under the Security tab of the repository, or
+- Use "Report a vulnerability" under the "Security and quality" tab of the repository, or
 - write to support@mizuchi.dev.
 
 Tell us what you found, which version or commit, and how to reproduce it. A proof of concept helps. A fix is welcome but not needed.
