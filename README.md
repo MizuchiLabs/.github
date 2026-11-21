@@ -45,6 +45,12 @@ Go is handled like this:
 - Every repo counts as an app by default. Apps pin an exact `go` line in the root `go.mod` and Renovate bumps it on every Go release. Patches come as `sec(deps)` and release right away. Minors come as `fix(deps)` three days after release, so golangci-lint can catch up.
 - Libraries keep the `go` line as the minimum for importers and raise it by hand. A `toolchain` line picks the Go that CI and releases build with, and Renovate keeps it current. Their `renovate.json` turns off `golang` updates, and libraries without a binary also commit `toolchain` bumps as `chore` so they don't release. See kata for a pure library and sqlite-schema-diff for one that ships a CLI. If a Go vulnerability alert beats the plain update, Renovate forces it to `sec(deps)` and the library releases anyway.
 
+## Issue templates and security policy
+
+`.github/ISSUE_TEMPLATE/` and `SECURITY.md` are the org defaults. GitHub shows them in every repo that has none of its own, no copying needed. Blank issues are off, so people pick the bug, feature or "question or other" form. The bug and feature forms set the `Bug` and `Feature` issue types.
+
+A repo that adds its own `.github/ISSUE_TEMPLATE/` loses all the default templates, there is no merging. The same goes for a repo with its own `SECURITY.md` (fuu, inkan and tonya have one).
+
 ## Templates
 
 `templates/` holds files that can't be referenced remotely. Run `./sync.sh` to copy them into the sibling checkouts, `./sync.sh --check` to only report drift. A `renovate.json` with its own `packageRules` is left alone.

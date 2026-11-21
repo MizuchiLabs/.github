@@ -1,0 +1,55 @@
+name: Bug report
+description: Something is broken or doesn't work the way the docs say.
+type: Bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. A few details up front save a lot of back and forth.
+        Found a security problem? Please don't post it here, see the security policy instead.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+      placeholder: |
+        I ran `foo sync` and expected it to pick up the new config.
+        It exited with "config not found" instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can I reproduce it?
+      description: The smallest set of steps, config or code that shows the problem.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `--version`, the image tag, or the commit. "latest" moves, so please give the real one.
+      placeholder: v1.4.2
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, architecture, and how you run it (binary, Docker, go install, ...).
+      placeholder: Fedora 43, amd64, Docker
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Any error output or logs. No need for backticks, this gets formatted as code.
+      render: shell

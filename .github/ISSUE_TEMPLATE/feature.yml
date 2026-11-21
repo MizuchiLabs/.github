@@ -1,0 +1,26 @@
+name: Feature request
+description: An idea for something new, or a change to how something works.
+type: Feature
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The problem or use case behind the idea. This matters more than the solution.
+      placeholder: I run it on a few machines and have to copy the config by hand every time.
+    validations:
+      required: true
+
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would help?
+      description: How you picture it working. Rough is fine.
+    validations:
+      required: true
+
+  - type: textarea
+    id: else
+    attributes:
+      label: Anything else?
+      description: Workarounds you use today, other tools that do it well, links.
