@@ -40,6 +40,8 @@ Releases run every Wednesday at 03:40 UTC (early morning in Vienna), and only wh
 
 Each repo's `.github/renovate.json` extends `local>MizuchiLabs/.github`, the rules live in `default.json`. Libraries add a few `packageRules` of their own below it. Everything automerges, CI is the gate. Updates under `web/` are committed as `fix(deps)` because they ship in the binary, vulnerability fixes as `sec(deps)` so they release immediately.
 
+Renovate automerges only one PR per repo each run, so non-major updates come grouped: one PR for `web/`, one for Go modules, one for GitHub Actions. Majors and security fixes always get their own PR. When one update breaks a group, the whole group waits until it is fixed or that package is pulled out with its own rule.
+
 Go is handled like this:
 
 - Every repo counts as an app by default. Apps pin an exact `go` line in the root `go.mod` and Renovate bumps it on every Go release. Patches come as `sec(deps)` and release right away. Minors come as `fix(deps)` three days after release, so golangci-lint can catch up.

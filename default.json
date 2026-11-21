@@ -16,7 +16,6 @@
   ],
   "automerge": true,
   "platformAutomerge": true,
-  "separateMinorPatch": true,
   "vulnerabilityAlerts": {
     "enabled": true,
     "semanticCommitType": "sec"
@@ -75,6 +74,46 @@
         "major"
       ],
       "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Renovate automerges one PR per run, so non-major updates come grouped to keep them from piling up. Security fixes always get their own PR",
+      "matchFileNames": [
+        "web/**"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "groupName": "web dependencies"
+    },
+    {
+      "description": "Go modules end up in the binary, indirect ones too, so the group always releases",
+      "matchManagers": [
+        "gomod"
+      ],
+      "matchDepTypes": [
+        "require",
+        "indirect"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "groupName": "go modules",
+      "semanticCommitType": "fix"
+    },
+    {
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest"
+      ],
+      "groupName": "github actions"
     }
   ]
 }
